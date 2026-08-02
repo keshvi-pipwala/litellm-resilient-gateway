@@ -46,9 +46,17 @@ to.
 ## Quickstart
 
 ```bash
-pip install -r requirements.txt
-python demo.py          # runs offline in mock mode, zero keys, zero cost
-python -m pytest -q     # 6 tests, all offline
+# 1. Open Terminal, go to the project folder
+cd ~/Downloads/litellm-resilient-gateway
+
+# 2. Install what it needs (one time)
+pip3 install -r requirements.txt
+
+# 3. Run the demo
+python3 demo.py
+
+# 4. (Optional) Run the tests — should say "6 passed"
+python3 -m pytest -q
 ```
 
 To run against real providers, set any subset of keys (it routes to what's
