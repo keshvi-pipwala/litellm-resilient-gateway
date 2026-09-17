@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resilient LLM Gateway — live demo</title>
+<meta name="description" content="Interactive demo of a LiteLLM-based gateway: one interface, ordered provider fallbacks, retries, cooldowns, per-request spend tracking and a budget guard.">
+<style>
+:root{--bg:#0b0b18;--panel:rgba(255,255,255,.035);--line:rgba(255,255,255,.09);--txt:#e9e9f4;--mute:rgba(255,255,255,.5);--p:#a78fff;--c:#40caff;--ok:#22e07a;--warn:#ffd166;--bad:#ff5a46}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1000px 500px at 50% -10%,rgba(124,122,207,.16),transparent),var(--bg);color:var(--txt);font:14px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:var(--c);text-decoration:none}.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}.logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#7c7acf,#40caff);display:grid;place-items:center;font-size:20px}
+h1{font-size:22px;margin:0}h1 small{color:var(--mute);font-weight:500;font-size:13px;margin-left:8px}
+.badge{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mute)}.badge.live{color:var(--ok);border-color:rgba(34,224,122,.4)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.card h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:0 0 10px}
+button{cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);border-radius:10px;padding:8px 12px;font-weight:700;font-size:12.5px}
+button.primary{background:linear-gradient(135deg,rgba(124,122,207,.6),rgba(64,202,255,.45));border-color:rgba(124,122,207,.7)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.prov{display:flex;flex-direction:column;gap:8px}.pv{display:grid;grid-template-columns:22px 1fr auto auto;gap:10px;align-items:center;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:12.5px}
+.dot{width:10px;height:10px;border-radius:50%}.pv b{font-weight:700}.pv .st{font-size:11.5px}.pv select{background:#07070f;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px 6px;font:inherit;font-size:11.5px}
+.log{background:#07070f;border:1px solid var(--line);border-radius:10px;padding:10px;font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;height:230px;overflow:auto;color:#cfd3ff}.log .t{color:var(--mute)}.log .bad{color:#ff8a7a}.log .ok{color:var(--ok)}.log .w{color:var(--warn)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.m{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:8px 10px}.m b{display:block;font-size:19px;font-weight:900}.m span{font-size:10.5px;color:var(--mute)}
+.bar{height:8px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--c)}
+pre{background:#07070f;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:11px;overflow:auto;color:#cfd3ff;margin:8px 0 0}
+.note{margin-top:22px;font-size:12px;color:var(--mute);border-top:1px solid var(--line);padding-top:12px}
+input[type=range]{width:100%}
+</style></head><body><div class="wrap">
+<header><div class="logo">🔀</div><h1>Resilient LLM Gateway <small>built on LiteLLM · interactive demo</small></h1><span class="badge live">● router simulation in your browser</span><a class="badge" href="https://github.com/keshvi-pipwala/litellm-resilient-gateway">GitHub</a><a class="badge" href="https://keshvi-portfolio-ten.vercel.app/projects">Portfolio</a></header>
+<div class="grid">
+<div class="card"><h2>Provider chain · set each provider's health</h2>
+<div class="prov" id="prov"></div>
+<div class="row"><button class="primary" id="one">Send 1 request</button><button class="primary" id="ten">Send 10 requests</button><button id="reset">Reset</button></div>
+<div class="row" style="margin-top:14px"><label style="font-size:12px;color:var(--mute);width:100%">Budget guard: $<span id="budv">0.0500</span><input type="range" id="bud" min="0.001" max="0.05" step="0.001" value="0.05"></label></div>
+<pre>Router(
+  model_list=[chat → openai/gpt-4o-mini,
+              chat-fallback-1 → anthropic/claude-3-5-sonnet,
+              chat-fallback-2 → gemini/gemini-1.5-flash],
+  fallbacks=[{"chat": ["chat-fallback-1","chat-fallback-2"]}],
+  num_retries=2, cooldown_time=5,
+)</pre></div>
+<div class="card"><h2>Request log · what the caller sees vs. what the gateway did</h2><div class="log" id="log"></div>
+<div class="metrics"><div class="m"><b id="m-calls">0</b><span>calls</span></div><div class="m"><b id="m-fb">0</b><span>fell back</span></div><div class="m"><b id="m-fail">0</b><span>failed (all providers)</span></div><div class="m"><b id="m-spend">$0.0000</b><span>total spend</span></div></div>
+<div class="bar"><i id="barfill" style="width:0%"></i></div><div style="font-size:11px;color:var(--mute);margin-top:4px" id="bartxt">0% of budget</div>
+</div></div>
+<div class="note"><b style="color:#fff">What this demo is.</b> The repo is a runnable Python gateway on <code>litellm.Router</code> that fails over across OpenAI → Anthropic → Gemini, retries with cooldown, and tracks spend per request (6 offline tests; runs with zero API keys in mock mode). This page simulates that router's policy in the browser so you can flip providers into rate-limit, latency or outage states and watch the caller keep getting answers from one stable interface — while spend accrues and the budget guard hard-stops calls when exceeded. Failure-mode spec and routing policy by <a href="https://keshvi-portfolio-ten.vercel.app/">Keshvi Pipwala</a>; implementation AI-assisted. It grew out of <a href="https://github.com/keshvi-pipwala/gitsense">GitSense</a>, where a single-provider rate limit took down a working agent.</div>
+</div>
+<script>
+const P=[{id:'chat',n:'OpenAI · gpt-4o-mini',cost:0.0000108,lat:420},{id:'chat-fallback-1',n:'Anthropic · claude-3-5-sonnet',cost:0.000045,lat:610},{id:'chat-fallback-2',n:'Gemini · 1.5-flash',cost:0.0000045,lat:380}];
+const st={};P.forEach(p=>st[p.id]={h:'healthy',cool:0});const M={calls:0,fb:0,fail:0,spend:0};const $=s=>document.querySelector(s);
+const log=(m,c='')=>{const d=$('#log');d.insertAdjacentHTML('beforeend',`<div><span class="t">${new Date().toISOString().slice(11,23)}</span> <span class="${c}">${m}</span></div>`);d.scrollTop=d.scrollHeight};
+function render(){$('#prov').innerHTML=P.map((p,i)=>{const s=st[p.id];const col=s.cool>0?'#ffd166':({healthy:'#22e07a',ratelimit:'#ff9a5c',latency:'#ffd166',outage:'#ff5a46'})[s.h];return`<div class="pv"><span class="dot" style="background:${col};box-shadow:0 0 8px ${col}"></span><span><b>${i+1}. ${p.n}</b><br><span class="st" style="color:${col}">${s.cool>0?`cooldown ${s.cool}s`:s.h}</span></span><span style="font-size:11px;color:var(--mute)">$${p.cost.toFixed(7)}/call</span><select data-p="${p.id}"><option value="healthy"${s.h==='healthy'?' selected':''}>healthy</option><option value="ratelimit"${s.h==='ratelimit'?' selected':''}>429 rate-limited</option><option value="latency"${s.h==='latency'?' selected':''}>slow (timeout)</option><option value="outage"${s.h==='outage'?' selected':''}>outage</option></select></div>`}).join('');document.querySelectorAll('[data-p]').forEach(s=>s.onchange=()=>{st[s.dataset.p].h=s.value;st[s.dataset.p].cool=0;log(`operator: ${s.dataset.p} → ${s.value}`,'w');render()});
+$('#m-calls').textContent=M.calls;$('#m-fb').textContent=M.fb;$('#m-fail').textContent=M.fail;$('#m-spend').textContent='$'+M.spend.toFixed(6);const b=+$('#bud').value;const pct=Math.min(100,M.spend/b*100);$('#barfill').style.width=pct+'%';$('#barfill').style.background=pct>=100?'var(--bad)':pct>70?'var(--warn)':'var(--c)';$('#bartxt').textContent=pct.toFixed(0)+'% of budget'}
+$('#bud').oninput=()=>{$('#budv').textContent=(+$('#bud').value).toFixed(4);render()};
+const w=ms=>new Promise(r=>setTimeout(r,ms));
+async function request(){const b=+$('#bud').value;if(M.spend>=b){log(`budget guard: $${M.spend.toFixed(6)} ≥ $${b.toFixed(4)} — request blocked before any provider call`,'bad');M.fail++;render();return}
+M.calls++;let fell=false;for(const p of P){const s=st[p.id];if(s.cool>0){log(`  skip ${p.id} (cooldown)`,'w');fell=true;continue}
+for(let attempt=0;attempt<=2;attempt++){await w(60);if(s.h==='healthy'){M.spend+=p.cost;if(fell)M.fb++;log(`served by <b>${p.id}</b> · ${p.lat}ms · $${p.cost.toFixed(7)}${fell?' · <span class="w">fell back = True (caller unaware)</span>':''}`,'ok');render();return}
+const err=({ratelimit:'429 RateLimitError',latency:'Timeout after 8000ms',outage:'503 ServiceUnavailable'})[s.h];log(`  ${p.id} attempt ${attempt+1}: ${err}`,'bad');if(s.h==='ratelimit'||s.h==='outage')break}
+s.cool=5;fell=true;log(`  → cooldown ${p.id} for 5s, trying next in chain`,'w');render()}
+M.fail++;log('all providers exhausted — raising to caller','bad');render()}
+$('#one').onclick=request;$('#ten').onclick=async()=>{for(let i=0;i<10;i++)await request()};
+$('#reset').onclick=()=>{P.forEach(p=>st[p.id]={h:'healthy',cool:0});Object.assign(M,{calls:0,fb:0,fail:0,spend:0});$('#log').innerHTML='';log('router reset · 3 providers healthy','ok');render()};
+setInterval(()=>{let ch=false;P.forEach(p=>{if(st[p.id].cool>0){st[p.id].cool--;ch=true;if(st[p.id].cool===0)log(`${p.id} cooldown over — re-admitted to rotation`,'ok')}});if(ch)render()},1000);
+log('router ready · mode: SIMULATION (no API keys) · try: set provider 1 to 429, then send 10 requests','ok');render();
+</script></body></html>
