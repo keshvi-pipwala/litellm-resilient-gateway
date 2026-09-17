@@ -1,5 +1,8 @@
 # Resilient LLM Gateway (built on LiteLLM)
 
+> 🟢 **Interactive demo (no install):** https://keshvi-pipwala.github.io/litellm-resilient-gateway/ — runs the same pipeline shape in your browser. Full stack: see setup below.
+
+
 > **Code:** [`litellm-resilient-gateway/`](./litellm-resilient-gateway) · Failure-mode spec and routing policy by Keshvi Pipwala; implementation AI-assisted under her direction. Companion to [GitSense](https://github.com/keshvi-pipwala/gitsense), where the rate-limit problem first hit.
 
 
