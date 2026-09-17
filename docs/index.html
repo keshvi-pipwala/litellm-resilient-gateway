@@ -1,63 +1,80 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Resilient LLM Gateway — live demo</title>
+<title>Resilient LLM Gateway — demo</title>
 <meta name="description" content="Interactive demo of a LiteLLM-based gateway: one interface, ordered provider fallbacks, retries, cooldowns, per-request spend tracking and a budget guard.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0b18;--panel:rgba(255,255,255,.035);--line:rgba(255,255,255,.09);--txt:#e9e9f4;--mute:rgba(255,255,255,.5);--p:#a78fff;--c:#40caff;--ok:#22e07a;--warn:#ffd166;--bad:#ff5a46}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(1000px 500px at 50% -10%,rgba(124,122,207,.16),transparent),var(--bg);color:var(--txt);font:14px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
-a{color:var(--c);text-decoration:none}.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
-header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}.logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#7c7acf,#40caff);display:grid;place-items:center;font-size:20px}
-h1{font-size:22px;margin:0}h1 small{color:var(--mute);font-weight:500;font-size:13px;margin-left:8px}
-.badge{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mute)}.badge.live{color:var(--ok);border-color:rgba(34,224,122,.4)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:860px){.grid{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.card h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:0 0 10px}
-button{cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);border-radius:10px;padding:8px 12px;font-weight:700;font-size:12.5px}
-button.primary{background:linear-gradient(135deg,rgba(124,122,207,.6),rgba(64,202,255,.45));border-color:rgba(124,122,207,.7)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
-.prov{display:flex;flex-direction:column;gap:8px}.pv{display:grid;grid-template-columns:22px 1fr auto auto;gap:10px;align-items:center;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:12.5px}
-.dot{width:10px;height:10px;border-radius:50%}.pv b{font-weight:700}.pv .st{font-size:11.5px}.pv select{background:#07070f;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px 6px;font:inherit;font-size:11.5px}
-.log{background:#07070f;border:1px solid var(--line);border-radius:10px;padding:10px;font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;height:230px;overflow:auto;color:#cfd3ff}.log .t{color:var(--mute)}.log .bad{color:#ff8a7a}.log .ok{color:var(--ok)}.log .w{color:var(--warn)}
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.m{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:8px 10px}.m b{display:block;font-size:19px;font-weight:900}.m span{font-size:10.5px;color:var(--mute)}
-.bar{height:8px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--c)}
-pre{background:#07070f;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:11px;overflow:auto;color:#cfd3ff;margin:8px 0 0}
-.note{margin-top:22px;font-size:12px;color:var(--mute);border-top:1px solid var(--line);padding-top:12px}
-input[type=range]{width:100%}
+:root{--paper:#faf7f2;--ink:#1f1b16;--mute:#7a7167;--line:#e6dfd3;--card:#fffdf9;--terra:#c2410c;--sage:#3f7d58;--gold:#b7791f;--sky:#2f6f9f}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.55 Inter,system-ui,sans-serif}
+a{color:var(--sky);text-decoration:none;border-bottom:1px solid #b9cfe0}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 24px 70px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:26px}
+h1{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:38px;letter-spacing:-.5px;margin:0;line-height:1.1}h1 em{font-style:italic;color:var(--terra)}
+.sub{color:var(--mute);font-size:14px;margin-top:6px}
+nav a{margin-left:18px;font-size:13px}
+.flow{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px 4px}
+svg{width:100%;height:auto;display:block}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:22px}@media(max-width:820px){.controls{grid-template-columns:1fr}}
+h2{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:18px;margin:0 0 10px}
+.prov{display:flex;flex-direction:column;gap:8px}.pv{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:10px 12px}
+.pv .idx{font-family:Fraunces,serif;font-size:20px;color:var(--mute);width:22px}.pv b{font-weight:600}.pv .st{font-size:12px}.pv small{color:var(--mute);font-size:12px}
+select{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 8px;color:var(--ink)}
+button{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:999px;padding:9px 16px;cursor:pointer}button.ghost{background:transparent;color:var(--ink)}button:hover{opacity:.88}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.ledger{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;font-weight:600;color:var(--mute);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:9px 12px;border-bottom:1px solid var(--line);background:#f4efe6}td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}tr:last-child td{border-bottom:0}
+td.served{font-weight:600}.ok{color:var(--sage)}.bad{color:var(--terra)}.warn{color:var(--gold)}
+.tbody{max-height:280px;overflow:auto;display:block}.tbody table{display:table}
+.totals{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:#f4efe6}.totals div{padding:10px 12px}.totals b{display:block;font-family:Fraunces,serif;font-size:22px;font-weight:600}.totals span{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.budget{margin-top:14px;font-size:13px}.budget input{width:100%;accent-color:var(--terra)}.bbar{height:6px;background:#eadfcd;border-radius:3px;overflow:hidden;margin-top:6px}.bbar i{display:block;height:100%;background:var(--sage)}
+pre{font:12px/1.5 ui-monospace,Menlo,monospace;background:#f4efe6;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:12px 0 0;color:#4a4238;overflow:auto}
+.note{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);color:var(--mute);font-size:13px;line-height:1.65}.note b{color:var(--ink)}
 </style></head><body><div class="wrap">
-<header><div class="logo">🔀</div><h1>Resilient LLM Gateway <small>built on LiteLLM · interactive demo</small></h1><span class="badge live">● router simulation in your browser</span><a class="badge" href="https://github.com/keshvi-pipwala/litellm-resilient-gateway">GitHub</a><a class="badge" href="https://keshvi-portfolio-ten.vercel.app/projects">Portfolio</a></header>
-<div class="grid">
-<div class="card"><h2>Provider chain · set each provider's health</h2>
-<div class="prov" id="prov"></div>
-<div class="row"><button class="primary" id="one">Send 1 request</button><button class="primary" id="ten">Send 10 requests</button><button id="reset">Reset</button></div>
-<div class="row" style="margin-top:14px"><label style="font-size:12px;color:var(--mute);width:100%">Budget guard: $<span id="budv">0.0500</span><input type="range" id="bud" min="0.001" max="0.05" step="0.001" value="0.05"></label></div>
-<pre>Router(
-  model_list=[chat → openai/gpt-4o-mini,
-              chat-fallback-1 → anthropic/claude-3-5-sonnet,
-              chat-fallback-2 → gemini/gemini-1.5-flash],
+<header><div><h1>One interface. <em>Many providers.</em><br>Automatic failover.</h1><div class="sub">Resilient LLM Gateway · built on LiteLLM · interactive demo (no API keys — the router policy runs in your browser)</div></div><nav><a href="https://github.com/keshvi-pipwala/litellm-resilient-gateway">Source</a><a href="https://keshvi-portfolio-ten.vercel.app/projects">Portfolio</a></nav></header>
+
+<div class="flow"><svg viewBox="0 0 1040 200" id="flow"></svg></div>
+
+<div class="controls">
+<div><h2>Provider chain</h2><div class="prov" id="prov"></div>
+<div class="row"><button id="one">Send one request</button><button id="ten">Send ten</button><button class="ghost" id="reset">Reset</button></div>
+<div class="budget">Budget guard · <b id="budv">$0.0500</b><input type="range" id="bud" min="0.0005" max="0.05" step="0.0005" value="0.05"><div class="bbar"><i id="bfill" style="width:0%"></i></div><div id="btxt" style="font-size:12px;color:var(--mute);margin-top:4px">0% of budget used</div></div>
+<pre>Router(model_list=[
+  chat            → openai/gpt-4o-mini,
+  chat-fallback-1 → anthropic/claude-3-5-sonnet,
+  chat-fallback-2 → gemini/gemini-1.5-flash ],
   fallbacks=[{"chat": ["chat-fallback-1","chat-fallback-2"]}],
-  num_retries=2, cooldown_time=5,
-)</pre></div>
-<div class="card"><h2>Request log · what the caller sees vs. what the gateway did</h2><div class="log" id="log"></div>
-<div class="metrics"><div class="m"><b id="m-calls">0</b><span>calls</span></div><div class="m"><b id="m-fb">0</b><span>fell back</span></div><div class="m"><b id="m-fail">0</b><span>failed (all providers)</span></div><div class="m"><b id="m-spend">$0.0000</b><span>total spend</span></div></div>
-<div class="bar"><i id="barfill" style="width:0%"></i></div><div style="font-size:11px;color:var(--mute);margin-top:4px" id="bartxt">0% of budget</div>
-</div></div>
-<div class="note"><b style="color:#fff">What this demo is.</b> The repo is a runnable Python gateway on <code>litellm.Router</code> that fails over across OpenAI → Anthropic → Gemini, retries with cooldown, and tracks spend per request (6 offline tests; runs with zero API keys in mock mode). This page simulates that router's policy in the browser so you can flip providers into rate-limit, latency or outage states and watch the caller keep getting answers from one stable interface — while spend accrues and the budget guard hard-stops calls when exceeded. Failure-mode spec and routing policy by <a href="https://keshvi-portfolio-ten.vercel.app/">Keshvi Pipwala</a>; implementation AI-assisted. It grew out of <a href="https://github.com/keshvi-pipwala/gitsense">GitSense</a>, where a single-provider rate limit took down a working agent.</div>
+  num_retries=2, cooldown_time=5)</pre></div>
+<div><h2>Request ledger</h2><div class="ledger"><div class="tbody"><table><thead><tr><th>#</th><th>served by</th><th>path</th><th>latency</th><th>cost</th></tr></thead><tbody id="rows"><tr><td colspan="5" style="color:var(--mute)">No requests yet. Set provider 1 to <i>429 rate-limited</i>, then send ten.</td></tr></tbody></table></div>
+<div class="totals"><div><b id="m-calls">0</b><span>calls</span></div><div><b id="m-fb">0</b><span>fell back</span></div><div><b id="m-fail">0</b><span>failed</span></div><div><b id="m-spend">$0</b><span>spend</span></div></div></div></div>
+</div>
+
+<div class="note"><b>About this demo.</b> The repository is a runnable Python gateway on <code>litellm.Router</code>: strict primary → fallback chain across OpenAI, Anthropic and Gemini, retries with cooldown, per-request spend tracking with a budget guard, six offline tests, and a mock mode that runs with zero keys. This page reproduces that router's policy in the browser so you can flip providers into rate-limit, timeout or outage states and watch the caller keep getting answers from one stable interface while spend accrues and the budget guard hard-stops calls once exceeded. Failure-mode spec and routing policy by <a href="https://keshvi-portfolio-ten.vercel.app/">Keshvi Pipwala</a>; implementation AI-assisted. It grew out of <a href="https://github.com/keshvi-pipwala/gitsense">GitSense</a>, where a single-provider rate limit took down a working agent.</div>
 </div>
 <script>
 const P=[{id:'chat',n:'OpenAI · gpt-4o-mini',cost:0.0000108,lat:420},{id:'chat-fallback-1',n:'Anthropic · claude-3-5-sonnet',cost:0.000045,lat:610},{id:'chat-fallback-2',n:'Gemini · 1.5-flash',cost:0.0000045,lat:380}];
-const st={};P.forEach(p=>st[p.id]={h:'healthy',cool:0});const M={calls:0,fb:0,fail:0,spend:0};const $=s=>document.querySelector(s);
-const log=(m,c='')=>{const d=$('#log');d.insertAdjacentHTML('beforeend',`<div><span class="t">${new Date().toISOString().slice(11,23)}</span> <span class="${c}">${m}</span></div>`);d.scrollTop=d.scrollHeight};
-function render(){$('#prov').innerHTML=P.map((p,i)=>{const s=st[p.id];const col=s.cool>0?'#ffd166':({healthy:'#22e07a',ratelimit:'#ff9a5c',latency:'#ffd166',outage:'#ff5a46'})[s.h];return`<div class="pv"><span class="dot" style="background:${col};box-shadow:0 0 8px ${col}"></span><span><b>${i+1}. ${p.n}</b><br><span class="st" style="color:${col}">${s.cool>0?`cooldown ${s.cool}s`:s.h}</span></span><span style="font-size:11px;color:var(--mute)">$${p.cost.toFixed(7)}/call</span><select data-p="${p.id}"><option value="healthy"${s.h==='healthy'?' selected':''}>healthy</option><option value="ratelimit"${s.h==='ratelimit'?' selected':''}>429 rate-limited</option><option value="latency"${s.h==='latency'?' selected':''}>slow (timeout)</option><option value="outage"${s.h==='outage'?' selected':''}>outage</option></select></div>`}).join('');document.querySelectorAll('[data-p]').forEach(s=>s.onchange=()=>{st[s.dataset.p].h=s.value;st[s.dataset.p].cool=0;log(`operator: ${s.dataset.p} → ${s.value}`,'w');render()});
-$('#m-calls').textContent=M.calls;$('#m-fb').textContent=M.fb;$('#m-fail').textContent=M.fail;$('#m-spend').textContent='$'+M.spend.toFixed(6);const b=+$('#bud').value;const pct=Math.min(100,M.spend/b*100);$('#barfill').style.width=pct+'%';$('#barfill').style.background=pct>=100?'var(--bad)':pct>70?'var(--warn)':'var(--c)';$('#bartxt').textContent=pct.toFixed(0)+'% of budget'}
-$('#bud').oninput=()=>{$('#budv').textContent=(+$('#bud').value).toFixed(4);render()};
-const w=ms=>new Promise(r=>setTimeout(r,ms));
-async function request(){const b=+$('#bud').value;if(M.spend>=b){log(`budget guard: $${M.spend.toFixed(6)} ≥ $${b.toFixed(4)} — request blocked before any provider call`,'bad');M.fail++;render();return}
-M.calls++;let fell=false;for(const p of P){const s=st[p.id];if(s.cool>0){log(`  skip ${p.id} (cooldown)`,'w');fell=true;continue}
-for(let attempt=0;attempt<=2;attempt++){await w(60);if(s.h==='healthy'){M.spend+=p.cost;if(fell)M.fb++;log(`served by <b>${p.id}</b> · ${p.lat}ms · $${p.cost.toFixed(7)}${fell?' · <span class="w">fell back = True (caller unaware)</span>':''}`,'ok');render();return}
-const err=({ratelimit:'429 RateLimitError',latency:'Timeout after 8000ms',outage:'503 ServiceUnavailable'})[s.h];log(`  ${p.id} attempt ${attempt+1}: ${err}`,'bad');if(s.h==='ratelimit'||s.h==='outage')break}
-s.cool=5;fell=true;log(`  → cooldown ${p.id} for 5s, trying next in chain`,'w');render()}
-M.fail++;log('all providers exhausted — raising to caller','bad');render()}
+const st={};P.forEach(p=>st[p.id]={h:'healthy',cool:0});const M={calls:0,fb:0,fail:0,spend:0};const $=s=>document.querySelector(s);let active=null,pulse=null;
+const COL={healthy:'#3f7d58',ratelimit:'#b7791f',latency:'#b7791f',outage:'#c2410c'};
+function drawFlow(){const y=[55,100,145];let s='<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#c9bfae"/></marker></defs>';
+s+=`<rect x="20" y="70" width="150" height="60" rx="8" fill="#fff" stroke="#e6dfd3"/><text x="95" y="96" text-anchor="middle" font-family="Inter" font-size="13" font-weight="600" fill="#1f1b16">your app</text><text x="95" y="114" text-anchor="middle" font-family="ui-monospace,Menlo" font-size="11" fill="#7a7167">chat("…")</text>`;
+s+=`<line x1="170" y1="100" x2="300" y2="100" stroke="#c9bfae" stroke-width="1.5" marker-end="url(#ar)"/>`;
+s+=`<rect x="305" y="55" width="190" height="90" rx="8" fill="#1f1b16"/><text x="400" y="88" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-size="16" fill="#faf7f2">gateway</text><text x="400" y="108" text-anchor="middle" font-family="ui-monospace,Menlo" font-size="10.5" fill="#c9bfae">litellm.Router</text><text x="400" y="126" text-anchor="middle" font-family="ui-monospace,Menlo" font-size="10.5" fill="#c9bfae">retries · cooldown · spend</text>`;
+P.forEach((p,i)=>{const c=st[p.id].cool>0?'#b7791f':COL[st[p.id].h];const on=active===p.id;s+=`<path d="M495,100 C560,100 560,${y[i]} 620,${y[i]}" fill="none" stroke="${on?'#c2410c':'#c9bfae'}" stroke-width="${on?2.5:1.5}" marker-end="url(#ar)"/>`;s+=`<rect x="625" y="${y[i]-18}" width="270" height="36" rx="6" fill="#fff" stroke="${c}" stroke-width="${on?2:1.2}"/><circle cx="642" cy="${y[i]}" r="5" fill="${c}"/><text x="656" y="${y[i]+4}" font-family="Inter" font-size="12.5" font-weight="600" fill="#1f1b16">${i+1}. ${p.n}</text><text x="885" y="${y[i]+4}" text-anchor="end" font-family="ui-monospace,Menlo" font-size="10.5" fill="${c}">${st[p.id].cool>0?'cooldown '+st[p.id].cool+'s':st[p.id].h}</text>`});
+if(pulse)s+=`<circle r="5" fill="#c2410c"><animateMotion dur="0.6s" repeatCount="1" path="M170,100 L300,100 L495,100 C560,100 560,${pulse} 620,${pulse}"/></circle>`;
+$('#flow').innerHTML=s}
+function render(){$('#prov').innerHTML=P.map((p,i)=>{const s=st[p.id];const c=s.cool>0?'#b7791f':COL[s.h];return`<div class="pv"><span class="idx">${i+1}</span><span><b>${p.n}</b><br><span class="st" style="color:${c}">${s.cool>0?`cooldown ${s.cool}s`:s.h}</span></span><small>$${p.cost.toFixed(7)}/call</small><select data-p="${p.id}"><option value="healthy"${s.h==='healthy'?' selected':''}>healthy</option><option value="ratelimit"${s.h==='ratelimit'?' selected':''}>429 rate-limited</option><option value="latency"${s.h==='latency'?' selected':''}>timeout</option><option value="outage"${s.h==='outage'?' selected':''}>outage</option></select></div>`}).join('');
+document.querySelectorAll('[data-p]').forEach(s=>s.onchange=()=>{st[s.dataset.p].h=s.value;st[s.dataset.p].cool=0;render()});
+$('#m-calls').textContent=M.calls;$('#m-fb').textContent=M.fb;$('#m-fail').textContent=M.fail;$('#m-spend').textContent='$'+M.spend.toFixed(5);const b=+$('#bud').value,pct=Math.min(100,M.spend/b*100);$('#bfill').style.width=pct+'%';$('#bfill').style.background=pct>=100?'#c2410c':pct>70?'#b7791f':'#3f7d58';$('#btxt').textContent=pct.toFixed(0)+'% of budget used';drawFlow()}
+$('#bud').oninput=()=>{$('#budv').textContent='$'+(+$('#bud').value).toFixed(4);render()};
+const w=ms=>new Promise(r=>setTimeout(r,ms));let n=0;
+function row(served,path,lat,cost,cls){const tb=$('#rows');if(tb.children[0]&&tb.children[0].children.length===1)tb.innerHTML='';tb.insertAdjacentHTML('afterbegin',`<tr><td>${n}</td><td class="served ${cls}">${served}</td><td style="color:var(--mute)">${path}</td><td>${lat}</td><td>${cost}</td></tr>`)}
+async function request(){const b=+$('#bud').value;n++;if(M.spend>=b){M.fail++;row('— blocked','budget guard: spend ≥ budget, no provider called','—','$0','bad');render();return}
+M.calls++;let fell=false,path=[];for(const p of P){const s=st[p.id];if(s.cool>0){path.push(`${p.id}: skip (cooldown)`);fell=true;continue}
+for(let a=0;a<=2;a++){active=p.id;pulse=[55,100,145][P.indexOf(p)];drawFlow();await w(160);if(s.h==='healthy'){M.spend+=p.cost;if(fell)M.fb++;path.push(`${p.id}: ok`);row(p.n,path.join(' → ')+(fell?'  · caller unaware':''),p.lat+'ms','$'+p.cost.toFixed(7),fell?'warn':'ok');active=null;pulse=null;render();return}
+const err=({ratelimit:'429',latency:'timeout',outage:'503'})[s.h];path.push(`${p.id}: ${err}${a<2&&s.h==='latency'?' retry':''}`);if(s.h!=='latency')break}
+s.cool=5;fell=true}
+M.fail++;row('— failed','all providers exhausted: '+path.join(' → '),'—','$0','bad');active=null;pulse=null;render()}
 $('#one').onclick=request;$('#ten').onclick=async()=>{for(let i=0;i<10;i++)await request()};
-$('#reset').onclick=()=>{P.forEach(p=>st[p.id]={h:'healthy',cool:0});Object.assign(M,{calls:0,fb:0,fail:0,spend:0});$('#log').innerHTML='';log('router reset · 3 providers healthy','ok');render()};
-setInterval(()=>{let ch=false;P.forEach(p=>{if(st[p.id].cool>0){st[p.id].cool--;ch=true;if(st[p.id].cool===0)log(`${p.id} cooldown over — re-admitted to rotation`,'ok')}});if(ch)render()},1000);
-log('router ready · mode: SIMULATION (no API keys) · try: set provider 1 to 429, then send 10 requests','ok');render();
+$('#reset').onclick=()=>{P.forEach(p=>st[p.id]={h:'healthy',cool:0});Object.assign(M,{calls:0,fb:0,fail:0,spend:0});n=0;$('#rows').innerHTML='<tr><td colspan="5" style="color:var(--mute)">Reset. Set provider 1 to <i>429 rate-limited</i>, then send ten.</td></tr>';render()};
+setInterval(()=>{let ch=false;P.forEach(p=>{if(st[p.id].cool>0){st[p.id].cool--;ch=true}});if(ch)render()},1000);
+render();
 </script></body></html>
